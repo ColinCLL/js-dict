@@ -1,0 +1,2 @@
+# js-dict
+ dict tool
