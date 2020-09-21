@@ -7,6 +7,13 @@ interface Sheet {
   key?: strOrArr;
 }
 
+interface Init {
+  dataBase: { [prop: string]: object };
+  changeable: boolean; //是否允许外部改变内部
+  persist: boolean;
+  name?: string;
+}
+
 function hasKey(key: strOrArr | undefined): boolean {
   if (Boolean(key)) {
     return true;
@@ -18,18 +25,24 @@ function hasKey(key: strOrArr | undefined): boolean {
 
 class Dict {
   private dataBase: { [prop: string]: object } = {};
-  // private changeable: boolean = true;
-  // private persist: boolean = false;
-  // private name: string = "";
+  private changeable: boolean = false; //是否允许外部改变内部
+  private persist: boolean = true;
+  private name;
 
   // 待代理set优化
-  constructor(dataBase: { [prop: string]: object } = {}) {
-    this.dataBase = dataBase;
+  constructor(option?: Init) {
+    if (option !== undefined) {
+      this.init(option);
+    }
   }
 
-  public init(dataBase: { [prop: string]: object } = {}): object {
-    this.dataBase = dataBase;
-    return dataBase;
+  public init(option: Init): object {
+    this.dataBase = option.dataBase;
+    this.changeable = option.changeable;
+    this.persist = option.persist;
+    this.name = option.name;
+
+    return this.dataBase;
   }
 
   public getDataBase(): object {
@@ -96,12 +109,13 @@ class Dict {
     }
   }
 
-  public hasItem(name: string, key: string) {
+  public hasItem(name: string, key: string): boolean {
     let sheet = this.dataBase[name];
     return key in sheet;
   }
 }
 
+//
 let globalDict = new Dict();
 
 export default Dict;
