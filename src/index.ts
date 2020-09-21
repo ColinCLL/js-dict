@@ -7,8 +7,15 @@ interface Sheet {
   key?: strOrArr;
 }
 
+interface Init {
+  dataBase: Record<string, object>;
+  changeable?: boolean; //是否允许外部改变内部
+  persist?: boolean;
+  name?: string;
+}
+
 function hasKey(key: strOrArr | undefined): boolean {
-  if (Boolean(key)) {
+  if (key !== undefined) {
     return true;
   } else {
     throw new Error('The key value is invalid');
@@ -17,30 +24,59 @@ function hasKey(key: strOrArr | undefined): boolean {
 }
 
 class Dict {
-  private dataBase: { [prop: string]: object } = {};
-  // private changeable: boolean = true;
-  // private persist: boolean = false;
-  // private name: string = "";
+  private dataBase: any = {};
+  private changeable: boolean = false; //是否允许外部改变内部
+  // private persist: boolean = true;
+  // private name:string = "";
+  private changeFlag = false; // 是否进行内部改变
 
   // 待代理set优化
-  constructor(dataBase: { [prop: string]: object } = {}) {
-    this.dataBase = dataBase;
+  constructor(option?: Init) {
+    // if (option !== undefined) {
+    // }
+    this.init(option);
   }
 
-  public init(dataBase: { [prop: string]: object } = {}): object {
-    this.dataBase = dataBase;
-    return dataBase;
+  public init(option?: Init): object {
+    let def: Init = {
+      dataBase: {},
+      changeable: false,
+      persist: true,
+      name: '',
+    };
+    Object.assign(this, def, option);
+    this.dataBase = this.watch(this.dataBase);
+    return this.dataBase;
   }
 
   public getDataBase(): object {
     return this.dataBase;
   }
 
+  public watch(obj: object | any[]) {
+    return new Proxy(obj, {
+      get: (target, key) => {
+        return target[key];
+      },
+      set: (target, key, value) => {
+        let falg = this.changeable || this.changeFlag;
+        if (falg) {
+          target[key] = value;
+        } else {
+          throw new Error('Dict is not changeable.');
+        }
+
+        this.changeFlag = false;
+        return falg;
+      },
+    });
+  }
+
   public addSheet(sheetObj: Sheet): object {
     let { name, data, key } = sheetObj;
-
     let sheet = {};
 
+    this.changeFlag = true;
     if (Array.isArray(data)) {
       hasKey(key);
       data.map(row => {
@@ -52,9 +88,9 @@ class Dict {
           });
           keys = arr.join('_');
         } else {
-          keys = key;
+          keys = row[String(key)];
         }
-        sheet[String(keys)] = row;
+        sheet[keys] = row;
       });
     } else {
       sheet = data;
@@ -68,6 +104,7 @@ class Dict {
   }
 
   public delSheet(name: string): boolean {
+    this.changeFlag = true;
     if (Boolean(this.dataBase[name])) {
       delete this.dataBase[name];
       return true;
@@ -77,7 +114,7 @@ class Dict {
   }
 
   public hasSheet(name: string) {
-    return Boolean(this.dataBase[name]);
+    return name in this.dataBase;
   }
 
   public getItem(name: string, key: string): any {
@@ -86,6 +123,7 @@ class Dict {
   }
 
   public delItem(name: string, key: string): boolean {
+    this.changeFlag = true;
     let sheet = this.dataBase[name];
 
     if (key in sheet) {
@@ -96,12 +134,13 @@ class Dict {
     }
   }
 
-  public hasItem(name: string, key: string) {
+  public hasItem(name: string, key: string): boolean {
     let sheet = this.dataBase[name];
     return key in sheet;
   }
 }
 
+//
 let globalDict = new Dict();
 
 export default Dict;
