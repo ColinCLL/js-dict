@@ -1,7 +1,7 @@
 {
-  "name": "timemark",
-  "version": "1.1.0",
-  "description": "a tool for humanizing time",
+  "name": "js-dict",
+  "version": "1.0.0",
+  "description": "dict in js",
   "main": "index.js",
   "scripts": {
     "test": "jest",
